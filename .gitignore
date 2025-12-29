@@ -9,6 +9,9 @@ __pycache__/
 # csv outputfile
 *.csv
 
+# json file
+*.json
+
 # Distribution / packaging
 .Python
 build/
