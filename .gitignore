@@ -13,7 +13,7 @@ __pycache__/
 *.json
 
 # project result files
-#NGN_IAA/projects/**
+NGN_IAA/projects/**
 
 # Distribution / packaging
 .Python
