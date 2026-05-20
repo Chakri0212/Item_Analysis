@@ -1,10 +1,5 @@
 import pandas as pd
 import numpy as np
-
-import getpass as gt
-import psycopg2
-from sqlalchemy import create_engine, sql
-
 import shutil
 import os
 from openpyxl import load_workbook
@@ -14,9 +9,9 @@ import datetime
 import warnings
 import sys
 
-import matplotlib.pyplot as plt
-import seaborn as sns
-from scipy import stats
+# import matplotlib.pyplot as plt
+# import seaborn as sns
+# from scipy import stats
 
 from . import salvador
 from .salvador import color
@@ -50,9 +45,10 @@ def resp_cleaning(resp, re_order = True):
     return final_resp.strip()
 
 def describe_dupe_cor_ans(df, no_correctAnswer = False, use_contentItemName = False):
+    _omit_val = 0 if pd.api.types.is_numeric_dtype(df['response']) else '0'
     if (use_contentItemName == True):
         if (no_correctAnswer == True):
-            cadf = df[(df['score']==1) & (df['response']!=0) & (df['response'].notnull())][['contentItemName', 'response']].drop_duplicates().sort_values(by=['contentItemName'], ignore_index = True)
+            cadf = df[(df['score']==1) & (df['response']!=_omit_val) & (df['response'].notnull())][['contentItemName', 'response']].drop_duplicates().sort_values(by=['contentItemName'], ignore_index = True)
             cadf.rename(columns={'response' : 'correctAnswer'}, inplace = True)
         else:
             cadf = df[df['correctAnswer'].notnull()][['contentItemName', 'correctAnswer']].drop_duplicates()
@@ -72,7 +68,7 @@ def describe_dupe_cor_ans(df, no_correctAnswer = False, use_contentItemName = Fa
         return outputdf
     else:
         if (no_correctAnswer == True):
-            cadf = df[(df['score']==1) & (df['response']!=0) & (df['response'].notnull())][['contentItemId', 'response']].drop_duplicates().sort_values(by=['contentItemId'], ignore_index = True)
+            cadf = df[(df['score']==1) & (df['response']!=_omit_val) & (df['response'].notnull())][['contentItemId', 'response']].drop_duplicates().sort_values(by=['contentItemId'], ignore_index = True)
             cadf.rename(columns={'response' : 'correctAnswer'}, inplace = True)
         else:
             cadf = df[df['correctAnswer'].notnull()][['contentItemId', 'correctAnswer']].drop_duplicates()
@@ -101,7 +97,8 @@ def cor_ans(df):
     #cor_ans_df = cor_ans_df[cor_ans_df['rank']==1].drop(columns=['rank', 'max'])
     #cor_ans_df.rename(columns={'response':'correctAnswer'}, inplace = True)
     
-    cor_ans_df = df[(df['score']==1) & (df['response']!=0) & (df['response'].notnull())][['contentItemId', 'contentItemName', 'displaySeq', 'response', 'dateCreated']].drop_duplicates(ignore_index=True)
+    _omit_val = 0 if pd.api.types.is_numeric_dtype(df['response']) else '0'
+    cor_ans_df = df[(df['score']==1) & (df['response']!=_omit_val) & (df['response'].notnull())][['contentItemId', 'contentItemName', 'displaySeq', 'response', 'dateCreated']].drop_duplicates(ignore_index=True)
     cor_ans_df = cor_ans_df.groupby(by=['contentItemId', 'contentItemName', 'displaySeq', 'response'], as_index = False).agg(max_dateCreated = ('dateCreated', 'max')).sort_values(by=['displaySeq'], ignore_index = True)
     cor_ans_df['rank'] = cor_ans_df.groupby(by=['contentItemId', 'contentItemName'])['max_dateCreated'].rank(ascending = False, method = 'first')
     cor_ans_df = cor_ans_df[cor_ans_df['rank']==1].drop(columns=['rank'])
@@ -114,9 +111,10 @@ def cor_ans(df):
     return cor_ans_df
 
 def get_item_cor_ans(df, no_correctAnswer = False, use_contentItemName = False):
+    _omit_val = 0 if pd.api.types.is_numeric_dtype(df['response']) else '0'
     if(use_contentItemName == True):
         if (no_correctAnswer == True):
-            cadf = df[(df['score']==1) & (df['response']!=0) & (df['response'].notnull())][['contentItemName', 'response']].drop_duplicates().sort_values(by=['contentItemName'], ignore_index = True)
+            cadf = df[(df['score']==1) & (df['response']!=_omit_val) & (df['response'].notnull())][['contentItemName', 'response']].drop_duplicates().sort_values(by=['contentItemName'], ignore_index = True)
             cadf.rename(columns={'response' : 'correctAnswer'}, inplace = True)
             
             if(cadf['contentItemName'].nunique() < cadf.shape[0]):
@@ -152,7 +150,7 @@ def get_item_cor_ans(df, no_correctAnswer = False, use_contentItemName = False):
     else:
         #use_contentItemName = False
         if (no_correctAnswer):
-            cadf = df[(df['score']==1) & (df['response']!=0) & (df['response'].notnull())][['contentItemId', 'response']].drop_duplicates().sort_values(by=['contentItemId'], ignore_index = True)
+            cadf = df[(df['score']==1) & (df['response']!=_omit_val) & (df['response'].notnull())][['contentItemId', 'response']].drop_duplicates().sort_values(by=['contentItemId'], ignore_index = True)
             cadf.rename(columns={'response' : 'correctAnswer'}, inplace = True)
             
             if(cadf['contentItemId'].nunique() < cadf.shape[0]):
@@ -199,7 +197,8 @@ def recode_as_omitted(df, omit_condition = pd.Series(dtype = 'float')):
         warnings.warn('Null omit condition defaulted to False')
     if(len(omit_condition)>0):
         #change responses to 0
-        df.loc[omit_condition, 'response'] = 0
+        omit_val = 0 if pd.api.types.is_numeric_dtype(df['response']) else '0'
+        df.loc[omit_condition, 'response'] = omit_val
         #change score to 0
         df.loc[omit_condition, 'score'] = 0
         #change attempted to False
@@ -212,7 +211,8 @@ def recode_as_omitted(df, omit_condition = pd.Series(dtype = 'float')):
     return df
     
 def timing_exclusion(df, mSec_min_threshold = None, mSec_max_threshold = None, sec_min_threshold = None, sec_max_threshold = None):
-    df_time = df[df['response']!=0]
+    omit_val = 0 if pd.api.types.is_numeric_dtype(df['response']) else '0'
+    df_time = df[df['response']!=omit_val]
     
     if((mSec_min_threshold == None) and (sec_min_threshold == None) and (mSec_max_threshold == None) and (sec_max_threshold == None)):
         ## this whole first part is only if arguments are not specified.
@@ -535,9 +535,10 @@ def clean_item_data(data_path = '_',
     if (remove_impo_response_scored == True):
         
         #making response = 0 for empty responses and got score
-        respExcl.loc[(respExcl['response'].isnull()) & (respExcl['score']==1), 'response'] = 0
+        _omit_val = 0 if pd.api.types.is_numeric_dtype(respExcl['response']) else '0'
+        respExcl.loc[(respExcl['response'].isnull()) & (respExcl['score']==1), 'response'] = _omit_val
         # Excluding sequences that have weird response records - scored as correct without a response
-        seq_to_exclude_calc1 = respExcl[(respExcl['score']==1) & (respExcl['response'] == 0)]['sequenceId'].unique()
+        seq_to_exclude_calc1 = respExcl[(respExcl['score']==1) & (respExcl['response'] == _omit_val)]['sequenceId'].unique()
         
         if(len(seq_to_exclude_calc1)>0):
             #adding data to rejects df
@@ -669,7 +670,8 @@ def clean_item_data(data_path = '_',
     print('Total item responses: ', num_responses_current,'\n')
     
     #Staged response records (for CATs only)
-    respExcl['attempted'] = np.where(respExcl['response'].isnull(), False, respExcl['response']!=0)
+    omit_val = 0 if pd.api.types.is_numeric_dtype(respExcl['response']) else '0'
+    respExcl['attempted'] = np.where(respExcl['response'].isnull(), False, respExcl['response']!=omit_val)
     
     if(remove_staged_responses == True):
         #adding data to rejects df
@@ -1363,7 +1365,7 @@ def make_user_level_matrices(df,
         df = df[df['repeatOmitted']==False].copy()
         #marking omit values to omit_code here
         new_col = col+'_omits'
-        df[new_col] = df[col]
+        df[new_col] = df[col].astype(object)
         df.loc[df['attempted']==False, new_col] = omit_code
         df.loc[df['responseStatus']=='not-reached', new_col] = not_seen_code
         big_matrix = pd.pivot(data = df, index = 'studentId', columns='contentItemName', values = new_col)

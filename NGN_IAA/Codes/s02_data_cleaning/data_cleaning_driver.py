@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-import sqlalchemy as sql
+#import sqlalchemy as sql
 from IPython.display import display
 # import pgpasslib
 import sys
@@ -31,8 +31,8 @@ def run_code(params):
     # Params #
     ##########
     analysis_name = params['report_name']
-    data_path='G:\\My Drive\\My_laptop_backup\\DRCR_Q2_2024\\Automation_project\\Git_hub_code\\item_analysis_automation-main\\NGN_IAA\\projects\\{0}\\01_data_pull\\data\\'.format(analysis_name)
-    results_path='G:\\My Drive\\My_laptop_backup\\DRCR_Q2_2024\\Automation_project\\Git_hub_code\\item_analysis_automation-main\\NGN_IAA\\projects\\{0}\\02_data_cleaning\\'.format(analysis_name)
+    data_path = params.get('data_path', 'projects/{0}/01_data_pull/data/'.format(analysis_name))
+    results_path = params.get('results_path', 'projects/{0}/02_data_cleaning/'.format(analysis_name))
 
     #results_path = f"projects/{analysis_name}/02_data_cleaning/"
     
@@ -81,7 +81,7 @@ def run_code(params):
     try :
         max_points_correct_answer_df
     except:
-        max_points_correct_answer_df = pd.read_sql(sql = max_points_correct_answer_query, con = engine.raw_connection())
+        max_points_correct_answer_df = pd.read_sql(max_points_correct_answer_query, db_con())
 
     #### considering only maxscore with respective items once again to avoid any duplicates
     content_df = pd.merge(content_df,max_points_correct_answer_df.groupby(['content_item_name','content_item_id']).agg(max_points=('max_points','max')).reset_index(), on = ['content_item_id', 'content_item_name'], how = 'inner') 
@@ -97,9 +97,9 @@ def run_code(params):
         rational_responses=response_df[response_df['content_item_id'].isin(list(rational_items['content_item_id'].unique()))]
         
         ## formating the code to repull the rational item responses from redshift to avoid any issues with bjorne pull
-        with open(os.getcwd()+'\\item_analysis_automation-main\\NGN_IAA\\Codes\\s01_data_pull\\Rational_items_score.sql', "r") as sql_file2:
+        sql_file_path = os.path.join(os.path.dirname(__file__), '..', 's01_data_pull', 'Rational_items_score.sql')
+        with open(sql_file_path, "r") as sql_file2:
             rational_query = sql_file2.read()
-            sql_file2.close()
 
             rational_query=rational_query.format(activity_start_date=f"'{pd.Timestamp(params['start_date']).normalize().strftime('%Y-%m-%d %H:%M:%S')}'",
                                  activity_end_date=f"'{pd.Timestamp(params['end_date']).normalize().strftime('%Y-%m-%d %H:%M:%S')}'",
@@ -116,7 +116,7 @@ def run_code(params):
         try :
             rational_responses_frm_redshift
         except:
-            rational_responses_frm_redshift = pd.read_sql(sql = rational_query, con = engine.raw_connection())
+            rational_responses_frm_redshift = pd.read_sql(rational_query, db_con())
 
         #### Handling rational responses those are pulled from redshift
 
@@ -355,7 +355,7 @@ def run_code(params):
     try:
         frt_enrols
     except:
-        frt_enrols = pd.read_sql(sql = query_frt, con = engine.raw_connection())
+        frt_enrols = pd.read_sql( query_frt, db_con())
 
 
     ##############
@@ -373,7 +373,7 @@ def run_code(params):
     try:
         olc_enrols
     except:
-        olc_enrols = pd.read_sql(sql = query_olc, con = engine.raw_connection())
+        olc_enrols = pd.read_sql(query_olc, db_con())
 
 
     #############
@@ -392,7 +392,7 @@ def run_code(params):
     try:
         repeaters
     except:
-        repeaters = pd.read_sql(sql = query_hsg_repeat, con = engine.raw_connection())
+        repeaters = pd.read_sql(query_hsg_repeat, db_con())
         repeaters['kbsenrollmentid'] = repeaters['kbsenrollmentid'].astype('str')   
 
     #################

@@ -1,21 +1,10 @@
 import pandas as pd
-import numpy as np
-
-import getpass as gt
-import psycopg2
-from sqlalchemy import create_engine, sql,event
-
+import redshift_connector
 import os
 from openpyxl import load_workbook
-
-import re
-import datetime
-import warnings
-import sys
-
-import matplotlib.pyplot as plt
-import seaborn as sns
-from scipy import stats
+# import matplotlib.pyplot as plt
+# import seaborn as sns
+# from scipy import stats
 
 class color:
    PURPLE = '\033[95m'
@@ -31,46 +20,19 @@ class color:
 
 def db_con():
     #make a connection to the database with your credentials
-    '''
-    user = gt.getpass('Enter db username : ')
-    pswd = gt.getpass('Enter db password : ')
-    db = input('Enter database : ') '''
-    
-    dbname = 'redshiftapps'
-    user = 'reporting_user'
-    pword = 'User_4_Reporting'
+    user = '000'#gt.getpass('Enter db username : ')
+    pswd = '000'#gt.getpass('Enter db password : ')
+    db = 'redshiftapps'#input('Enter database : ')
     host = 'redshift-apps-clusterredshift-19qcp828fizxm.ctebqc6bt0fq.us-east-1.redshift.amazonaws.com'
     port = '5439'
-    
-    '''
-    try:
-        engine
-
-    except Exception:
-        engine = create_engine('postgresql://' + user + ':' + pword + '@' + host + ':' + port + '/' + dbname)
-    # Patch: Remove 'standard_conforming_strings' for Redshift
-    @event.listens_for(engine, "connect")
-    def do_connect(dbapi_connection, connection_record):
-        try:
-            dbapi_connection.cursor().execute("SET standard_conforming_strings TO off")
-        except Exception:
-            pass  # Ignore if not supported 
-        
-        '''
-
-    engine = create_engine('postgresql://' + user + ':' + pword + '@' + host + ':' + port + '/' + dbname) 
-
-    '''
-    # Test the engine connection
-    try:
-        with engine.connect() as conn:
-            print("Database connection successful.")
-    except Exception as e:
-        print(f"Database connection failed: {e}")
-        return '''
-
-    return engine  
-
+    conn = redshift_connector.connect(
+        host=host,
+        database=db,
+        user=user,
+        password=pswd,
+        port=port
+    )
+    return conn
     
 
 def teleg_msg(msg):
